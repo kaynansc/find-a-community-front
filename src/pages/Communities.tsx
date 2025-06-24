@@ -1,68 +1,137 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Search, MapPin, Users, Calendar, Filter } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface Community {
+  id: string;
+  name: string;
+  description: string;
+  categoryId: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  organizerId: string;
+  createdAt: string;
+  category: {
+    id: string;
+    name: string;
+    description: string;
+  };
+  _count: {
+    memberships: number;
+  };
+}
+
+interface CommunitiesResponse {
+  data: Community[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    limit: number;
+  };
+}
 
 const Communities = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const { token } = useAuth();
 
-  const communities = [
-    {
-      id: 1,
-      name: 'Vancouver Brazilian Community',
-      category: 'Cultural',
-      members: 234,
-      location: 'Downtown Vancouver',
-      description: 'Connect with fellow Brazilians in Vancouver. Weekly gatherings, cultural events, and support network.',
-      nextEvent: 'Sunday Service - March 3rd',
-      image: 'https://images.unsplash.com/photo-1523712999610-f77fbcfc3843'
-    },
-    {
-      id: 2,
-      name: 'Tech Professionals Meetup',
-      category: 'Professional',
-      members: 567,
-      location: 'South Vancouver',
-      description: 'Weekly networking events for tech professionals. Share knowledge and build connections.',
-      nextEvent: 'Networking Night - March 5th',
-      image: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6'
-    },
-    {
-      id: 3,
-      name: 'Hiking Enthusiasts',
-      category: 'Sports & Outdoor',
-      members: 189,
-      location: 'North Vancouver',
-      description: 'Explore beautiful BC trails together. All skill levels welcome for weekend adventures.',
-      nextEvent: 'Grouse Grind - March 8th',
-      image: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05'
-    },
-    {
-      id: 4,
-      name: 'Language Exchange Group',
-      category: 'Learning',
-      members: 145,
-      location: 'West Vancouver',
-      description: 'Practice languages with native speakers. English, Spanish, French, and more.',
-      nextEvent: 'Coffee Chat - March 6th',
-      image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173'
+  const fetchCommunities = async (): Promise<CommunitiesResponse> => {
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: '12',
+    });
+
+    if (searchTerm) {
+      params.append('search', searchTerm);
     }
-  ];
 
-  const categories = ['all', 'Cultural', 'Professional', 'Sports & Outdoor', 'Learning', 'Social'];
+    if (selectedCategory !== 'all') {
+      params.append('category', selectedCategory);
+    }
 
-  const filteredCommunities = communities.filter(community => {
-    const matchesSearch = community.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         community.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || community.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const response = await fetch(`http://localhost:3000/api/communities?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch communities');
+    }
+
+    return response.json();
+  };
+
+  const { data: communitiesResponse, isLoading, error } = useQuery({
+    queryKey: ['communities', searchTerm, selectedCategory, currentPage],
+    queryFn: fetchCommunities,
+    enabled: !!token,
   });
+
+  const communities = communitiesResponse?.data || [];
+  const pagination = communitiesResponse?.pagination;
+
+  const categories = ['all', 'Cultural', 'Professional', 'Sports', 'Learning', 'Social'];
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  if (!token) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">Please sign in to view communities.</p>
+          <Button asChild>
+            <Link to="/login">Sign In</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading communities...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-red-500">Error loading communities. Please try again.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -79,11 +148,11 @@ const Communities = () => {
             <Input
               placeholder="Search communities..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
               className="pl-10"
             />
           </div>
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <Select value={selectedCategory} onValueChange={handleCategoryChange}>
             <SelectTrigger className="w-full md:w-[180px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Category" />
@@ -100,17 +169,12 @@ const Communities = () => {
       </div>
 
       {/* Communities Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCommunities.map((community) => (
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {communities.map((community) => (
           <Card key={community.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-            <div className="relative h-48 overflow-hidden">
-              <img 
-                src={community.image} 
-                alt={community.name}
-                className="w-full h-full object-cover"
-              />
+            <div className="relative h-48 overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
               <Badge className="absolute top-3 left-3">
-                {community.category}
+                {community.category.name}
               </Badge>
             </div>
             <CardHeader>
@@ -124,7 +188,7 @@ const Communities = () => {
               <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                 <div className="flex items-center gap-1">
                   <Users className="h-4 w-4" />
-                  {community.members}
+                  {community._count.memberships}
                 </div>
                 <div className="flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
@@ -134,7 +198,9 @@ const Communities = () => {
               
               <div className="flex items-center gap-2 mb-4 p-2 bg-primary/10 rounded">
                 <Calendar className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Next: {community.nextEvent}</span>
+                <span className="text-sm font-medium">
+                  Created: {new Date(community.createdAt).toLocaleDateString()}
+                </span>
               </div>
               
               <Button asChild className="w-full">
@@ -147,7 +213,40 @@ const Communities = () => {
         ))}
       </div>
 
-      {filteredCommunities.length === 0 && (
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <Pagination className="mb-8">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+              />
+            </PaginationItem>
+            
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
+              <PaginationItem key={page}>
+                <PaginationLink
+                  onClick={() => handlePageChange(page)}
+                  isActive={currentPage === page}
+                  className="cursor-pointer"
+                >
+                  {page}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            
+            <PaginationItem>
+              <PaginationNext 
+                onClick={() => handlePageChange(Math.min(pagination.totalPages, currentPage + 1))}
+                className={currentPage === pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+
+      {communities.length === 0 && !isLoading && (
         <div className="text-center py-12">
           <p className="text-muted-foreground">No communities found matching your criteria.</p>
           <Button variant="outline" className="mt-4" onClick={() => {
