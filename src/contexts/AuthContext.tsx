@@ -9,6 +9,7 @@ interface User {
   bio?: string;
   interests: string[];
   isOrganizer: boolean;
+  role?: string;
 }
 
 interface AuthContextType {
@@ -37,7 +38,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Check for existing session
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const storedToken = localStorage.getItem('token');
+    if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
     }
   }, []);
@@ -45,29 +47,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      const mockUser: User = {
-        id: '1',
-        name: email.split('@')[0],
-        email,
-        bio: 'New to Vancouver and looking to connect!',
-        interests: ['Sports', 'Technology', 'Food'],
-        isOrganizer: email.includes('organizer')
+      const response = await fetch('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
+
+      const data = await response.json();
+      
+      // Transform the API response to match our User interface
+      const transformedUser: User = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        bio: 'Welcome to Find a Community!',
+        interests: [],
+        isOrganizer: data.user.role === 'organizer',
+        role: data.user.role
       };
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(transformedUser);
+      localStorage.setItem('user', JSON.stringify(transformedUser));
+      localStorage.setItem('token', data.token);
       
       toast({
         title: "Welcome back!",
         description: "You've successfully logged in.",
       });
     } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: "Login failed",
         description: "Please check your credentials and try again.",
         variant: "destructive",
       });
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -76,6 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     toast({
       title: "Logged out",
       description: "See you soon!",

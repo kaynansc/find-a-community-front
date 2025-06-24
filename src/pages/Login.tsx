@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mail, Lock, Users } from 'lucide-react';
 
@@ -81,18 +80,6 @@ const Login = () => {
               {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
-
-          <div className="mt-6">
-            <Separator className="mb-4" />
-            <div className="text-center text-sm text-muted-foreground">
-              <p className="mb-2">Demo accounts:</p>
-              <div className="space-y-1 text-xs">
-                <p><strong>User:</strong> user@example.com</p>
-                <p><strong>Organizer:</strong> organizer@example.com</p>
-                <p><em>Use any password</em></p>
-              </div>
-            </div>
-          </div>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
