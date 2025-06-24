@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -45,6 +44,9 @@ interface Community {
   _count: {
     memberships: number;
   };
+  memberships?: Array<{
+    id: string;
+  }>;
 }
 
 interface Event {
@@ -76,7 +78,6 @@ const CommunityDetail = () => {
   const { user, token } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isJoined, setIsJoined] = useState(false);
 
   const fetchCommunity = async (): Promise<Community> => {
     const response = await fetch(`http://localhost:3000/api/communities/${id}`, {
@@ -120,6 +121,9 @@ const CommunityDetail = () => {
     enabled: !!token && !!id,
   });
 
+  // Check if user is already a member based on memberships array
+  const isJoined = community?.memberships && community.memberships.length > 0;
+
   const joinCommunityMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`http://localhost:3000/api/communities/${id}/join`, {
@@ -137,7 +141,6 @@ const CommunityDetail = () => {
       return response.json();
     },
     onSuccess: () => {
-      setIsJoined(true);
       queryClient.invalidateQueries({ queryKey: ['community', id] });
       toast({
         title: "Joined successfully!",
@@ -170,7 +173,6 @@ const CommunityDetail = () => {
       return response.json();
     },
     onSuccess: () => {
-      setIsJoined(false);
       queryClient.invalidateQueries({ queryKey: ['community', id] });
       toast({
         title: "Left community",
