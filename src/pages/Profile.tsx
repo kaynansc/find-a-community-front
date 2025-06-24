@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,12 +33,23 @@ interface ApiUser {
   createdAt: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  _count: {
+    communities: number;
+    interests: number;
+  };
+}
+
 const Profile = () => {
   const { user: authUser } = useAuth();
   const { toast } = useToast();
   const [user, setUser] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -94,6 +104,43 @@ const Profile = () => {
 
     fetchUserProfile();
   }, [authUser, toast]);
+
+  const fetchCategories = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch('http://localhost:3000/api/categories', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+
+      const categoriesData = await response.json();
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast({
+        title: "Error loading categories",
+        description: "Failed to load available interests.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditToggle = () => {
+    if (!isEditing) {
+      setIsEditing(true);
+      fetchCategories();
+    } else {
+      setIsEditing(false);
+    }
+  };
 
   const handleSave = () => {
     // For now, just update local state - you can add API call here later
