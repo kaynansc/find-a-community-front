@@ -1,10 +1,13 @@
 
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { 
   MapPin, 
   Users, 
@@ -15,52 +18,288 @@ import {
   Share2
 } from 'lucide-react';
 
+interface Community {
+  id: string;
+  name: string;
+  description: string;
+  categoryId: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  organizerId: string;
+  createdAt: string;
+  category: {
+    id: string;
+    name: string;
+    description: string;
+  };
+  organizer: {
+    id: string;
+    name: string;
+  };
+  events: Array<{
+    id: string;
+    title: string;
+    date: string;
+  }>;
+  _count: {
+    memberships: number;
+  };
+}
+
+interface Event {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  communityId: string;
+  _count: {
+    participants: number;
+  };
+}
+
+interface EventsResponse {
+  data: Event[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+}
+
 const CommunityDetail = () => {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isJoined, setIsJoined] = useState(false);
 
-  // Mock data - in real app, would fetch based on id
-  const community = {
-    id: 1,
-    name: 'Vancouver Brazilian Community',
-    category: 'Cultural',
-    members: 234,
-    location: 'Downtown Vancouver',
-    address: '123 Main St, Vancouver, BC V6B 1A1',
-    description: 'Welcome to the Vancouver Brazilian Community! We are a vibrant group of Brazilians and Brazilian culture enthusiasts living in the beautiful city of Vancouver. Our community organizes weekly gatherings, cultural events, and provides a strong support network for newcomers and long-time residents alike.',
-    longDescription: 'Founded in 2018, our community has grown to over 200 active members who participate in various activities throughout the year. We host weekly Portuguese conversation circles, monthly cultural celebrations, and quarterly community service projects. Whether you\'re homesick for Brazilian culture, want to practice Portuguese, or simply enjoy the warmth of Brazilian hospitality, you\'ll find a home here.',
-    organizer: 'Maria Silva',
-    contactEmail: 'maria@vancouverbrazilian.com',
-    image: 'https://images.unsplash.com/photo-1523712999610-f77fbcfc3843',
-    isJoined: false
+  const fetchCommunity = async (): Promise<Community> => {
+    const response = await fetch(`http://localhost:3000/api/communities/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch community');
+    }
+
+    return response.json();
   };
 
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: 'Sunday Service & Fellowship',
-      date: '2024-03-03',
-      time: '10:00 AM',
-      location: 'Community Center Downtown',
-      description: 'Join us for our weekly Sunday service followed by coffee and fellowship.'
-    },
-    {
-      id: 2,
-      title: 'Brazilian Cooking Class',
-      date: '2024-03-10',
-      time: '2:00 PM',
-      location: 'Community Kitchen',
-      description: 'Learn to make traditional feijoada with our experienced cooks.'
-    },
-    {
-      id: 3,
-      title: 'Portuguese Language Circle',
-      date: '2024-03-12',
-      time: '7:00 PM',
-      location: 'Library Meeting Room',
-      description: 'Practice Portuguese conversation in a friendly, supportive environment.'
+  const fetchEvents = async (): Promise<EventsResponse> => {
+    const response = await fetch(`http://localhost:3000/api/communities/${id}/events`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch events');
     }
-  ];
+
+    return response.json();
+  };
+
+  const { data: community, isLoading: communityLoading, error: communityError } = useQuery({
+    queryKey: ['community', id],
+    queryFn: fetchCommunity,
+    enabled: !!token && !!id,
+  });
+
+  const { data: eventsResponse, isLoading: eventsLoading } = useQuery({
+    queryKey: ['communityEvents', id],
+    queryFn: fetchEvents,
+    enabled: !!token && !!id,
+  });
+
+  const joinCommunityMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`http://localhost:3000/api/communities/${id}/join`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to join community');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsJoined(true);
+      queryClient.invalidateQueries({ queryKey: ['community', id] });
+      toast({
+        title: "Joined successfully!",
+        description: "Welcome to the community!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to join",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const leaveCommunityMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`http://localhost:3000/api/communities/${id}/leave`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to leave community');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsJoined(false);
+      queryClient.invalidateQueries({ queryKey: ['community', id] });
+      toast({
+        title: "Left community",
+        description: "You've successfully left the community.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to leave",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const attendEventMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const response = await fetch(`http://localhost:3000/api/events/${eventId}/attendance`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to attend event');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['communityEvents', id] });
+      toast({
+        title: "RSVP confirmed!",
+        description: "You're attending this event.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to RSVP",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const cancelAttendanceMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const response = await fetch(`http://localhost:3000/api/events/${eventId}/attendance`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel attendance');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['communityEvents', id] });
+      toast({
+        title: "RSVP cancelled",
+        description: "Your attendance has been cancelled.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to cancel",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleJoinLeave = () => {
+    if (isJoined) {
+      leaveCommunityMutation.mutate();
+    } else {
+      joinCommunityMutation.mutate();
+    }
+  };
+
+  const handleEventRSVP = (eventId: string, isAttending: boolean) => {
+    if (isAttending) {
+      cancelAttendanceMutation.mutate(eventId);
+    } else {
+      attendEventMutation.mutate(eventId);
+    }
+  };
+
+  if (!token) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">Please sign in to view community details.</p>
+          <Button asChild>
+            <Link to="/login">Sign In</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (communityLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading community details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (communityError || !community) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-red-500">Error loading community details. Please try again.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const events = eventsResponse?.data || [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -75,14 +314,9 @@ const CommunityDetail = () => {
       {/* Hero Section */}
       <div className="grid lg:grid-cols-3 gap-8 mb-8">
         <div className="lg:col-span-2">
-          <div className="relative h-64 md:h-80 rounded-lg overflow-hidden mb-6">
-            <img 
-              src={community.image} 
-              alt={community.name}
-              className="w-full h-full object-cover"
-            />
+          <div className="relative h-64 md:h-80 rounded-lg overflow-hidden mb-6 bg-gradient-to-br from-primary/20 to-primary/5">
             <Badge className="absolute top-4 left-4">
-              {community.category}
+              {community.category.name}
             </Badge>
           </div>
 
@@ -92,7 +326,7 @@ const CommunityDetail = () => {
               <div className="flex items-center gap-4 text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Users className="h-4 w-4" />
-                  {community.members} members
+                  {community._count.memberships} members
                 </div>
                 <div className="flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
@@ -112,7 +346,6 @@ const CommunityDetail = () => {
           </div>
 
           <p className="text-lg mb-6">{community.description}</p>
-          <p className="text-muted-foreground">{community.longDescription}</p>
         </div>
 
         {/* Sidebar */}
@@ -123,8 +356,16 @@ const CommunityDetail = () => {
             </CardHeader>
             <CardContent>
               {user ? (
-                <Button className="w-full" size="lg">
-                  {community.isJoined ? 'Leave Community' : 'Join Community'}
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={handleJoinLeave}
+                  disabled={joinCommunityMutation.isPending || leaveCommunityMutation.isPending}
+                >
+                  {joinCommunityMutation.isPending || leaveCommunityMutation.isPending 
+                    ? 'Processing...' 
+                    : isJoined ? 'Leave Community' : 'Join Community'
+                  }
                 </Button>
               ) : (
                 <div className="space-y-3">
@@ -146,17 +387,19 @@ const CommunityDetail = () => {
             <CardContent className="space-y-4">
               <div>
                 <h4 className="font-medium mb-1">Organizer</h4>
-                <p className="text-sm text-muted-foreground">{community.organizer}</p>
+                <p className="text-sm text-muted-foreground">{community.organizer.name}</p>
               </div>
               <Separator />
               <div>
                 <h4 className="font-medium mb-1">Location</h4>
-                <p className="text-sm text-muted-foreground">{community.address}</p>
+                <p className="text-sm text-muted-foreground">{community.location}</p>
               </div>
               <Separator />
               <div>
-                <h4 className="font-medium mb-1">Contact</h4>
-                <p className="text-sm text-muted-foreground">{community.contactEmail}</p>
+                <h4 className="font-medium mb-1">Created</h4>
+                <p className="text-sm text-muted-foreground">
+                  {new Date(community.createdAt).toLocaleDateString()}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -172,37 +415,61 @@ const CommunityDetail = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {upcomingEvents.map((event) => (
-              <div key={event.id} className="flex items-start gap-4 p-4 border rounded-lg">
-                <div className="text-center min-w-[60px]">
-                  <div className="text-sm font-medium text-primary">
-                    {new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
-                  </div>
-                  <div className="text-2xl font-bold">
-                    {new Date(event.date).getDate()}
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">{event.title}</h3>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {event.time}
+          {eventsLoading ? (
+            <p className="text-muted-foreground">Loading events...</p>
+          ) : events.length > 0 ? (
+            <div className="space-y-4">
+              {events.map((event) => (
+                <div key={event.id} className="flex items-start gap-4 p-4 border rounded-lg">
+                  <div className="text-center min-w-[60px]">
+                    <div className="text-sm font-medium text-primary">
+                      {new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {event.location}
+                    <div className="text-2xl font-bold">
+                      {new Date(event.date).getDate()}
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">{event.description}</p>
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1">{event.title}</h3>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(event.date).toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {event.location}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {event._count.participants} attending
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{event.description}</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleEventRSVP(event.id, false)}
+                    disabled={attendEventMutation.isPending || cancelAttendanceMutation.isPending}
+                  >
+                    {attendEventMutation.isPending || cancelAttendanceMutation.isPending 
+                      ? 'Processing...' 
+                      : 'RSVP'
+                    }
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm">
-                  RSVP
-                </Button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No upcoming events scheduled.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
