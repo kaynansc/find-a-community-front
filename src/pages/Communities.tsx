@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -10,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Search, MapPin, Users, Calendar, Filter } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDebounce } from '@/hooks/use-debounce';
 
 interface Community {
   id: string;
@@ -41,8 +41,15 @@ interface CommunitiesResponse {
   };
 }
 
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+}
+
 const Communities = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 500); // 500ms delay
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const { token } = useAuth();
@@ -53,8 +60,8 @@ const Communities = () => {
       limit: '12',
     });
 
-    if (searchTerm) {
-      params.append('search', searchTerm);
+    if (debouncedSearchTerm) {
+      params.append('search', debouncedSearchTerm);
     }
 
     if (selectedCategory !== 'all') {
@@ -76,7 +83,7 @@ const Communities = () => {
   };
 
   const { data: communitiesResponse, isLoading, error } = useQuery({
-    queryKey: ['communities', searchTerm, selectedCategory, currentPage],
+    queryKey: ['communities', debouncedSearchTerm, selectedCategory, currentPage],
     queryFn: fetchCommunities,
     enabled: !!token,
   });
@@ -84,12 +91,15 @@ const Communities = () => {
   const communities = communitiesResponse?.data || [];
   const pagination = communitiesResponse?.pagination;
 
-  const categories = ['all', 'Cultural', 'Professional', 'Sports', 'Learning', 'Social'];
-
-  const handleSearch = (value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page when searching
+  const fetchCategories = async (): Promise<Category[]> => {
+    const response = await fetch('http://localhost:3000/api/categories');
+    return response.json();
   };
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: fetchCategories,
+  });
 
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value);
@@ -148,7 +158,10 @@ const Communities = () => {
             <Input
               placeholder="Search communities..."
               value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when searching
+              }}
               className="pl-10"
             />
           </div>
@@ -158,9 +171,10 @@ const Communities = () => {
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category === 'all' ? 'All Categories' : category}
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories?.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
                 </SelectItem>
               ))}
             </SelectContent>
