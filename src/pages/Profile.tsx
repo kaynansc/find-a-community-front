@@ -58,12 +58,6 @@ const Profile = () => {
     interests: [] as string[] // This will store category IDs
   });
 
-  const availableInterests = [
-    'Sports', 'Technology', 'Food', 'Music', 'Art', 'Travel',
-    'Reading', 'Gaming', 'Photography', 'Fitness', 'Nature',
-    'Languages', 'Culture', 'Business', 'Volunteering'
-  ];
-
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!authUser) return;
@@ -84,13 +78,18 @@ const Profile = () => {
         }
 
         const userData = await response.json();
+        console.log('User data loaded:', userData);
         setUser(userData);
-        setFormData({
+        
+        // Initialize form data with user's current data, including selected interests
+        const initialFormData = {
           name: userData.name || '',
           email: userData.email || '',
           bio: userData.bio || '',
           interests: userData.interests.map((interest: any) => interest.id) || []
-        });
+        };
+        console.log('Setting initial form data:', initialFormData);
+        setFormData(initialFormData);
       } catch (error) {
         console.error('Error fetching user profile:', error);
         toast({
@@ -123,6 +122,7 @@ const Profile = () => {
       }
 
       const categoriesData = await response.json();
+      console.log('Categories loaded:', categoriesData);
       setCategories(categoriesData);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -169,6 +169,12 @@ const Profile = () => {
     }
 
     try {
+      console.log('Saving profile with data:', {
+        name: formData.name,
+        bio: formData.bio,
+        interests: formData.interests
+      });
+
       const response = await fetch('http://localhost:3000/api/users/me', {
         method: 'PUT',
         headers: {
@@ -187,6 +193,7 @@ const Profile = () => {
       }
 
       const updatedUserData = await response.json();
+      console.log('Profile updated, response:', updatedUserData);
       
       // Update local state with the response data
       // Note: The API returns interests as empty array, so we need to reconstruct it
@@ -230,12 +237,17 @@ const Profile = () => {
   };
 
   const toggleInterest = (categoryId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      interests: prev.interests.includes(categoryId)
+    console.log('Toggling interest:', categoryId);
+    setFormData(prev => {
+      const newInterests = prev.interests.includes(categoryId)
         ? prev.interests.filter(id => id !== categoryId)
-        : [...prev.interests, categoryId]
-    }));
+        : [...prev.interests, categoryId];
+      console.log('New interests array:', newInterests);
+      return {
+        ...prev,
+        interests: newInterests
+      };
+    });
   };
 
   if (!authUser) {
@@ -414,16 +426,23 @@ const Profile = () => {
                       Select your interests to help us recommend relevant communities:
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {categories.map((category) => (
-                        <Badge
-                          key={category.id}
-                          variant={formData.interests.includes(category.id) ? 'default' : 'outline'}
-                          className="cursor-pointer"
-                          onClick={() => !isSaving && toggleInterest(category.id)}
-                        >
-                          {category.name}
-                        </Badge>
-                      ))}
+                      {categories.map((category) => {
+                        const isSelected = formData.interests.includes(category.id);
+                        console.log(`Category ${category.name} (${category.id}) selected:`, isSelected);
+                        return (
+                          <Badge
+                            key={category.id}
+                            variant={isSelected ? 'default' : 'outline'}
+                            className="cursor-pointer"
+                            onClick={() => !isSaving && toggleInterest(category.id)}
+                          >
+                            {category.name}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Selected: {formData.interests.length} interests
                     </div>
                   </div>
                 ) : (
