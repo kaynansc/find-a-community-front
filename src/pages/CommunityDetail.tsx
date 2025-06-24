@@ -61,6 +61,9 @@ interface Event {
   _count: {
     participants: number;
   };
+  participants?: Array<{
+    id: string;
+  }>;
 }
 
 interface EventsResponse {
@@ -417,50 +420,55 @@ const CommunityDetail = () => {
             <p className="text-muted-foreground">Loading events...</p>
           ) : events.length > 0 ? (
             <div className="space-y-4">
-              {events.map((event) => (
-                <div key={event.id} className="flex items-start gap-4 p-4 border rounded-lg">
-                  <div className="text-center min-w-[60px]">
-                    <div className="text-sm font-medium text-primary">
-                      {new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
+              {events.map((event) => {
+                // Check if user is already attending this event
+                const isAttending = event.participants && event.participants.length > 0;
+                
+                return (
+                  <div key={event.id} className="flex items-start gap-4 p-4 border rounded-lg">
+                    <div className="text-center min-w-[60px]">
+                      <div className="text-sm font-medium text-primary">
+                        {new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
+                      </div>
+                      <div className="text-2xl font-bold">
+                        {new Date(event.date).getDate()}
+                      </div>
                     </div>
-                    <div className="text-2xl font-bold">
-                      {new Date(event.date).getDate()}
+                    <div className="flex-1">
+                      <h3 className="font-semibold mb-1">{event.title}</h3>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(event.date).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {event.location}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {event._count.participants} attending
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{event.description}</p>
                     </div>
+                    <Button 
+                      variant={isAttending ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleEventRSVP(event.id, isAttending)}
+                      disabled={attendEventMutation.isPending || cancelAttendanceMutation.isPending}
+                    >
+                      {attendEventMutation.isPending || cancelAttendanceMutation.isPending 
+                        ? 'Processing...' 
+                        : isAttending ? 'Cancel RSVP' : 'RSVP'
+                      }
+                    </Button>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">{event.title}</h3>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(event.date).toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {event.location}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {event._count.participants} attending
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{event.description}</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleEventRSVP(event.id, false)}
-                    disabled={attendEventMutation.isPending || cancelAttendanceMutation.isPending}
-                  >
-                    {attendEventMutation.isPending || cancelAttendanceMutation.isPending 
-                      ? 'Processing...' 
-                      : 'RSVP'
-                    }
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8">
