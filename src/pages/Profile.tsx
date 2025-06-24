@@ -49,6 +49,7 @@ const Profile = () => {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     name: '',
@@ -142,24 +143,68 @@ const Profile = () => {
     }
   };
 
-  const handleSave = () => {
-    // For now, just update local state - you can add API call here later
-    if (user) {
+  const handleSave = async () => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "Authentication token not found. Please log in again.",
+        variant: "destructive",
+      });
+      setIsSaving(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3000/api/users/me', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          bio: formData.bio,
+          interests: formData.interests
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      const updatedUserData = await response.json();
+      
+      // Update local state with the response data
+      // Note: The API returns interests as empty array, so we need to reconstruct it
       const updatedUser = {
-        ...user,
-        name: formData.name,
-        bio: formData.bio,
+        ...updatedUserData,
         interests: formData.interests.map(categoryId => {
           const category = categories.find(cat => cat.id === categoryId);
           return { id: categoryId, name: category?.name || '' };
         })
       };
+      
       setUser(updatedUser);
       setIsEditing(false);
+      
       toast({
         title: "Profile updated",
-        description: "Your changes have been saved locally.",
+        description: "Your profile has been successfully updated.",
       });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error updating profile",
+        description: "Failed to save your changes. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -280,13 +325,17 @@ const Profile = () => {
                   </Button>
                 ) : (
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleCancel}>
+                    <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
                       <X className="h-4 w-4 mr-2" />
                       Cancel
                     </Button>
-                    <Button onClick={handleSave}>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Changes
+                    <Button onClick={handleSave} disabled={isSaving}>
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      {isSaving ? 'Saving...' : 'Save Changes'}
                     </Button>
                   </div>
                 )}
@@ -308,6 +357,7 @@ const Profile = () => {
                           ...prev,
                           name: e.target.value
                         }))}
+                        disabled={isSaving}
                       />
                     ) : (
                       <p className="text-sm p-3 bg-muted rounded-md">{user.name}</p>
@@ -334,6 +384,7 @@ const Profile = () => {
                       }))}
                       placeholder="Tell us about yourself..."
                       rows={3}
+                      disabled={isSaving}
                     />
                   ) : (
                     <p className="text-sm p-3 bg-muted rounded-md">
@@ -359,7 +410,7 @@ const Profile = () => {
                           key={category.id}
                           variant={formData.interests.includes(category.id) ? 'default' : 'outline'}
                           className="cursor-pointer"
-                          onClick={() => toggleInterest(category.id)}
+                          onClick={() => !isSaving && toggleInterest(category.id)}
                         >
                           {category.name}
                         </Badge>
