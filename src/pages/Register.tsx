@@ -30,6 +30,17 @@ const Register = () => {
       });
 
       if (!response.ok) {
+        const errorData = await response.json();
+        
+        if (response.status === 409 && errorData.error === 'ConflictError') {
+          toast({
+            title: "Email already registered",
+            description: "This email is already associated with an account. Try signing in instead.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         throw new Error('Registration failed');
       }
 
