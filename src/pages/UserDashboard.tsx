@@ -1,5 +1,6 @@
 
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,55 +14,70 @@ import {
   Plus
 } from 'lucide-react';
 
+interface Community {
+  id: string;
+  name: string;
+  category: {
+    id: string;
+    name: string;
+  };
+  nextEvent: {
+    title: string;
+    date: string;
+  };
+}
+
+interface Event {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  communityId: string;
+  participants: Array<{
+    id: string;
+  }>;
+}
+
+interface DashboardData {
+  data: Community[];
+  upcomingEvents: Event[][];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    limit: number;
+  };
+}
+
 const UserDashboard = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
-  const joinedCommunities = [
-    {
-      id: 1,
-      name: 'Vancouver Brazilian Community',
-      category: 'Cultural',
-      nextEvent: 'Sunday Service - March 3rd',
-      image: 'https://images.unsplash.com/photo-1523712999610-f77fbcfc3843'
-    },
-    {
-      id: 2,
-      name: 'Tech Professionals Meetup',
-      category: 'Professional',
-      nextEvent: 'Networking Night - March 5th',
-      image: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6'
-    }
-  ];
+  const fetchDashboardData = async (): Promise<DashboardData> => {
+    const response = await fetch('http://localhost:3000/api/communities/me?page=1&limit=10', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: 'Sunday Service & Fellowship',
-      community: 'Vancouver Brazilian Community',
-      date: '2024-03-03',
-      time: '10:00 AM',
-      location: 'Community Center Downtown',
-      status: 'confirmed'
-    },
-    {
-      id: 2,
-      title: 'Networking Night',
-      community: 'Tech Professionals Meetup',
-      date: '2024-03-05',
-      time: '6:00 PM',
-      location: 'Tech Hub Vancouver',
-      status: 'pending'
-    },
-    {
-      id: 3,
-      title: 'Grouse Grind Hike',
-      community: 'Hiking Enthusiasts',
-      date: '2024-03-08',
-      time: '8:00 AM',
-      location: 'Grouse Mountain',
-      status: 'confirmed'
+    if (!response.ok) {
+      throw new Error('Failed to fetch dashboard data');
     }
-  ];
+
+    return response.json();
+  };
+
+  const { data: dashboardData, isLoading, error } = useQuery({
+    queryKey: ['userDashboard'],
+    queryFn: fetchDashboardData,
+    enabled: !!token && !!user,
+  });
+
+  const joinedCommunities = dashboardData?.data || [];
+  const upcomingEvents = dashboardData?.upcomingEvents?.flat() || [];
 
   if (!user) {
     return (
@@ -125,24 +141,32 @@ const UserDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {joinedCommunities.length > 0 ? (
+            {isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading your communities...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <p className="text-red-500">Error loading communities. Please try again.</p>
+              </div>
+            ) : joinedCommunities.length > 0 ? (
               <div className="space-y-4">
                 {joinedCommunities.map((community) => (
                   <div key={community.id} className="flex items-center gap-4 p-3 border rounded-lg">
-                    <img 
-                      src={community.image} 
-                      alt={community.name}
-                      className="w-12 h-12 rounded-lg object-cover"
-                    />
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                      <Users className="h-6 w-6 text-primary" />
+                    </div>
                     <div className="flex-1">
                       <h3 className="font-semibold">{community.name}</h3>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="text-xs">
-                          {community.category}
+                          {community.category.name}
                         </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          Next: {community.nextEvent}
-                        </span>
+                        {community.nextEvent && (
+                          <span className="text-sm text-muted-foreground">
+                            Next: {community.nextEvent.title}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <Button variant="outline" size="sm" asChild>
@@ -177,44 +201,51 @@ const UserDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {upcomingEvents.map((event) => (
-                <div key={event.id} className="p-4 border rounded-lg">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold">{event.title}</h3>
-                    <Badge variant={event.status === 'confirmed' ? 'default' : 'secondary'}>
-                      {event.status}
-                    </Badge>
+            {isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading events...</p>
+              </div>
+            ) : upcomingEvents.length > 0 ? (
+              <div className="space-y-4">
+                {upcomingEvents.map((event) => (
+                  <div key={event.id} className="p-4 border rounded-lg">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold">{event.title}</h3>
+                      <Badge variant={event.participants.length > 0 ? 'default' : 'secondary'}>
+                        {event.participants.length > 0 ? 'attending' : 'not attending'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {event.description}
+                    </p>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(event.date).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(event.date).toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {event.location}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {event.community}
-                  </p>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(event.date).toLocaleDateString()}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {event.time}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {event.location}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {upcomingEvents.length === 0 && (
-                <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">
-                    No upcoming events scheduled.
-                  </p>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  No upcoming events scheduled.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
