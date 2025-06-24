@@ -54,7 +54,7 @@ const Profile = () => {
     name: '',
     email: '',
     bio: '',
-    interests: [] as string[]
+    interests: [] as string[] // This will store category IDs
   });
 
   const availableInterests = [
@@ -88,7 +88,7 @@ const Profile = () => {
           name: userData.name || '',
           email: userData.email || '',
           bio: userData.bio || '',
-          interests: userData.interests.map((interest: any) => interest.name) || []
+          interests: userData.interests.map((interest: any) => interest.id) || []
         });
       } catch (error) {
         console.error('Error fetching user profile:', error);
@@ -149,7 +149,10 @@ const Profile = () => {
         ...user,
         name: formData.name,
         bio: formData.bio,
-        interests: formData.interests.map(name => ({ id: '', name }))
+        interests: formData.interests.map(categoryId => {
+          const category = categories.find(cat => cat.id === categoryId);
+          return { id: categoryId, name: category?.name || '' };
+        })
       };
       setUser(updatedUser);
       setIsEditing(false);
@@ -166,18 +169,18 @@ const Profile = () => {
         name: user.name || '',
         email: user.email || '',
         bio: user.bio || '',
-        interests: user.interests.map(interest => interest.name) || []
+        interests: user.interests.map(interest => interest.id) || []
       });
     }
     setIsEditing(false);
   };
 
-  const toggleInterest = (interest: string) => {
+  const toggleInterest = (categoryId: string) => {
     setFormData(prev => ({
       ...prev,
-      interests: prev.interests.includes(interest)
-        ? prev.interests.filter(i => i !== interest)
-        : [...prev.interests, interest]
+      interests: prev.interests.includes(categoryId)
+        ? prev.interests.filter(id => id !== categoryId)
+        : [...prev.interests, categoryId]
     }));
   };
 
@@ -271,7 +274,7 @@ const Profile = () => {
               <div className="flex items-center justify-between">
                 <CardTitle>Profile Details</CardTitle>
                 {!isEditing ? (
-                  <Button variant="outline" onClick={() => setIsEditing(true)}>
+                  <Button variant="outline" onClick={handleEditToggle}>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit Profile
                   </Button>
@@ -351,14 +354,14 @@ const Profile = () => {
                       Select your interests to help us recommend relevant communities:
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {availableInterests.map((interest) => (
+                      {categories.map((category) => (
                         <Badge
-                          key={interest}
-                          variant={formData.interests.includes(interest) ? 'default' : 'outline'}
+                          key={category.id}
+                          variant={formData.interests.includes(category.id) ? 'default' : 'outline'}
                           className="cursor-pointer"
-                          onClick={() => toggleInterest(interest)}
+                          onClick={() => toggleInterest(category.id)}
                         >
-                          {interest}
+                          {category.name}
                         </Badge>
                       ))}
                     </div>
