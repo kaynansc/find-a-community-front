@@ -133,11 +133,11 @@ const CommunityDetail = () => {
         },
       });
 
-      if (!response.ok) {
+      if (!response.ok && response.status !== 204) {
         throw new Error('Failed to join community');
       }
 
-      return response.json();
+      return response.status === 204 ? null : response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community', id] });
@@ -164,11 +164,11 @@ const CommunityDetail = () => {
         },
       });
 
-      if (!response.ok) {
+      if (!response.ok && response.status !== 204) {
         throw new Error('Failed to leave community');
       }
 
-      return response.json();
+      return response.status === 204 ? null : response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community', id] });
@@ -195,11 +195,11 @@ const CommunityDetail = () => {
         },
       });
 
-      if (!response.ok) {
+      if (!response.ok && response.status !== 204) {
         throw new Error('Failed to attend event');
       }
 
-      return response.json();
+      return response.status === 204 ? null : response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['communityEvents', id] });
@@ -226,11 +226,11 @@ const CommunityDetail = () => {
         },
       });
 
-      if (!response.ok) {
+      if (!response.ok && response.status !== 204) {
         throw new Error('Failed to cancel attendance');
       }
 
-      return response.json();
+      return response.status === 204 ? null : response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['communityEvents', id] });
