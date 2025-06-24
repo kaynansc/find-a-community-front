@@ -81,15 +81,13 @@ const Profile = () => {
         console.log('User data loaded:', userData);
         setUser(userData);
         
-        // Initialize form data with user's current data, including selected interests
-        const initialFormData = {
+        // We'll set the interests after we load the categories to properly match them
+        setFormData({
           name: userData.name || '',
           email: userData.email || '',
           bio: userData.bio || '',
-          interests: userData.interests.map((interest: any) => interest.id) || []
-        };
-        console.log('Setting initial form data:', initialFormData);
-        setFormData(initialFormData);
+          interests: [] // Will be populated after categories are loaded
+        });
       } catch (error) {
         console.error('Error fetching user profile:', error);
         toast({
@@ -124,6 +122,22 @@ const Profile = () => {
       const categoriesData = await response.json();
       console.log('Categories loaded:', categoriesData);
       setCategories(categoriesData);
+      
+      // After categories are loaded, match user's interests by name
+      if (user && user.interests) {
+        const matchedInterestIds = user.interests
+          .map(userInterest => {
+            const matchingCategory = categoriesData.find(cat => cat.name === userInterest.name);
+            return matchingCategory ? matchingCategory.id : null;
+          })
+          .filter(id => id !== null);
+        
+        console.log('Matched interest IDs:', matchedInterestIds);
+        setFormData(prev => ({
+          ...prev,
+          interests: matchedInterestIds
+        }));
+      }
     } catch (error) {
       console.error('Error fetching categories:', error);
       toast({
