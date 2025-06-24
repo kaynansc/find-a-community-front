@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { 
   User, 
   Mail, 
@@ -15,18 +16,35 @@ import {
   Heart, 
   Edit,
   Save,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+interface ApiUser {
+  id: string;
+  name: string;
+  email: string;
+  bio?: string;
+  interests: Array<{
+    id: string;
+    name: string;
+  }>;
+  role: string;
+  createdAt: string;
+}
+
 const Profile = () => {
-  const { user, updateProfile } = useAuth();
+  const { user: authUser } = useAuth();
+  const { toast } = useToast();
+  const [user, setUser] = useState<ApiUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    bio: user?.bio || '',
-    interests: user?.interests || []
+    name: '',
+    email: '',
+    bio: '',
+    interests: [] as string[]
   });
 
   const availableInterests = [
@@ -35,24 +53,75 @@ const Profile = () => {
     'Languages', 'Culture', 'Business', 'Volunteering'
   ];
 
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!authUser) return;
+      
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const response = await fetch('http://localhost:3000/api/users/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user profile');
+        }
+
+        const userData = await response.json();
+        setUser(userData);
+        setFormData({
+          name: userData.name || '',
+          email: userData.email || '',
+          bio: userData.bio || '',
+          interests: userData.interests.map((interest: any) => interest.name) || []
+        });
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        toast({
+          title: "Error loading profile",
+          description: "Failed to load your profile data.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [authUser, toast]);
+
   const handleSave = () => {
+    // For now, just update local state - you can add API call here later
     if (user) {
-      updateProfile({
+      const updatedUser = {
+        ...user,
         name: formData.name,
         bio: formData.bio,
-        interests: formData.interests
-      });
+        interests: formData.interests.map(name => ({ id: '', name }))
+      };
+      setUser(updatedUser);
       setIsEditing(false);
+      toast({
+        title: "Profile updated",
+        description: "Your changes have been saved locally.",
+      });
     }
   };
 
   const handleCancel = () => {
-    setFormData({
-      name: user?.name || '',
-      email: user?.email || '',
-      bio: user?.bio || '',
-      interests: user?.interests || []
-    });
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        bio: user.bio || '',
+        interests: user.interests.map(interest => interest.name) || []
+      });
+    }
     setIsEditing(false);
   };
 
@@ -65,7 +134,7 @@ const Profile = () => {
     }));
   };
 
-  if (!user) {
+  if (!authUser) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-md mx-auto">
@@ -85,6 +154,34 @@ const Profile = () => {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading profile...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle>Profile Not Found</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Unable to load your profile data.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="grid lg:grid-cols-3 gap-8">
@@ -97,7 +194,7 @@ const Profile = () => {
               </div>
               <CardTitle>{user.name}</CardTitle>
               <p className="text-muted-foreground">{user.email}</p>
-              {user.isOrganizer && (
+              {user.role === 'organizer' && (
                 <Badge className="mt-2">Community Organizer</Badge>
               )}
             </CardHeader>
@@ -222,8 +319,8 @@ const Profile = () => {
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {user.interests.map((interest) => (
-                      <Badge key={interest} variant="secondary">
-                        {interest}
+                      <Badge key={interest.id} variant="secondary">
+                        {interest.name}
                       </Badge>
                     ))}
                     {user.interests.length === 0 && (
