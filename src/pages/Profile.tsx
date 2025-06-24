@@ -140,6 +140,15 @@ const Profile = () => {
       fetchCategories();
     } else {
       setIsEditing(false);
+      // Reset form data to current user data when canceling
+      if (user) {
+        setFormData({
+          name: user.name || '',
+          email: user.email || '',
+          bio: user.bio || '',
+          interests: user.interests.map(interest => interest.id) || []
+        });
+      }
     }
   };
 
