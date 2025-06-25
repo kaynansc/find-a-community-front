@@ -174,11 +174,13 @@ const Index = () => {
               const IconComponent = categoryIcons[category.name as keyof typeof categoryIcons] || BookOpen;
               return (
                 <Card key={category.name} className="hover:shadow-lg transition-shadow cursor-pointer group">
-                  <CardContent className="p-6 text-center">
-                    <IconComponent className="h-8 w-8 mx-auto mb-3 text-primary group-hover:scale-110 transition-transform" />
-                    <h3 className="font-semibold mb-1">{category.name}</h3>
-                    <p className="text-sm text-muted-foreground">{category._count.communities} communities</p>
-                  </CardContent>
+                  <Link to={`/communities?category=${category.id}`}>
+                    <CardContent className="p-6 text-center">
+                      <IconComponent className="h-8 w-8 mx-auto mb-3 text-primary group-hover:scale-110 transition-transform" />
+                      <h3 className="font-semibold mb-1">{category.name}</h3>
+                      <p className="text-sm text-muted-foreground">{category._count.communities} communities</p>
+                    </CardContent>
+                  </Link>
                 </Card>
               );
             })}
