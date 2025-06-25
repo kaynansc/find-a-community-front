@@ -110,6 +110,18 @@ const Communities = () => {
     setCurrentPage(page);
   };
 
+  const handleLocationClick = (location: string, latitude?: number, longitude?: number) => {
+    let mapsUrl;
+    if (latitude && longitude) {
+      // Use coordinates if available for more precise location
+      mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    } else {
+      // Fallback to search by location name
+      mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(location)}`;
+    }
+    window.open(mapsUrl, '_blank');
+  };
+
   if (!token) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -204,10 +216,14 @@ const Communities = () => {
                   <Users className="h-4 w-4" />
                   {community._count.memberships}
                 </div>
-                <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleLocationClick(community.location, community.latitude, community.longitude)}
+                  className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                  title="View on Google Maps"
+                >
                   <MapPin className="h-4 w-4" />
                   {community.location}
-                </div>
+                </button>
               </div>
               
               <div className="flex items-center gap-2 mb-4 p-2 bg-primary/10 rounded">

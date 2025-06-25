@@ -112,6 +112,18 @@ const CommunityDetail = () => {
     return response.json();
   };
 
+  const handleLocationClick = (location: string, latitude?: number, longitude?: number) => {
+    let mapsUrl;
+    if (latitude && longitude) {
+      // Use coordinates if available for more precise location
+      mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    } else {
+      // Fallback to search by location name
+      mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(location)}`;
+    }
+    window.open(mapsUrl, '_blank');
+  };
+
   const { data: community, isLoading: communityLoading, error: communityError } = useQuery({
     queryKey: ['community', id],
     queryFn: fetchCommunity,
@@ -329,10 +341,14 @@ const CommunityDetail = () => {
                   <Users className="h-4 w-4" />
                   {community._count.memberships} members
                 </div>
-                <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleLocationClick(community.location, community.latitude, community.longitude)}
+                  className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                  title="View on Google Maps"
+                >
                   <MapPin className="h-4 w-4" />
                   {community.location}
-                </div>
+                </button>
               </div>
             </div>
             
@@ -444,10 +460,14 @@ const CommunityDetail = () => {
                             minute: '2-digit' 
                           })}
                         </div>
-                        <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleLocationClick(event.location, event.latitude, event.longitude)}
+                          className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                          title="View on Google Maps"
+                        >
                           <MapPin className="h-3 w-3" />
                           {event.location}
-                        </div>
+                        </button>
                         <div className="flex items-center gap-1">
                           <Users className="h-3 w-3" />
                           {event._count.participants} attending
