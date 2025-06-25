@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
 import { 
   MapPin, 
   Users, 
@@ -15,49 +16,106 @@ import {
   BookOpen
 } from 'lucide-react';
 
+interface Community {
+  id: string;
+  name: string;
+  description: string;
+  categoryId: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  organizerId: string;
+  createdAt: string;
+  category: {
+    id: string;
+    name: string;
+    description: string;
+  };
+  _count: {
+    memberships: number;
+  };
+}
+
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  _count: {
+    communities: number;
+    interests: number;
+  };
+}
+
 const Index = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
-  const featuredCommunities = [
-    {
-      id: 1,
-      name: 'Vancouver Brazilian Community',
-      category: 'Cultural',
-      members: 234,
-      location: 'Downtown Vancouver',
-      description: 'Connect with fellow Brazilians in Vancouver. Weekly gatherings, cultural events, and support network.',
-      nextEvent: 'Sunday Service - March 3rd',
-      image: 'https://images.unsplash.com/photo-1523712999610-f77fbcfc3843'
-    },
-    {
-      id: 2,
-      name: 'Tech Professionals Meetup',
-      category: 'Professional',
-      members: 567,
-      location: 'South Vancouver',
-      description: 'Weekly networking events for tech professionals. Share knowledge and build connections.',
-      nextEvent: 'Networking Night - March 5th',
-      image: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6'
-    },
-    {
-      id: 3,
-      name: 'Hiking Enthusiasts',
-      category: 'Sports & Outdoor',
-      members: 189,
-      location: 'North Vancouver',
-      description: 'Explore beautiful BC trails together. All skill levels welcome for weekend adventures.',
-      nextEvent: 'Grouse Grind - March 8th',
-      image: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05'
+  const fetchFeaturedCommunities = async (): Promise<Community[]> => {
+    const response = await fetch('http://localhost:3000/api/communities?page=1&limit=3&mostFeatured=true', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch featured communities');
     }
-  ];
 
-  const categories = [
-    { name: 'Sports & Fitness', icon: Heart, count: 45 },
-    { name: 'Cultural', icon: Globe, count: 32 },
-    { name: 'Social', icon: Coffee, count: 67 },
-    { name: 'Professional', icon: Users, count: 28 },
-    { name: 'Learning', icon: BookOpen, count: 41 }
-  ];
+    const data = await response.json();
+    return data.data;
+  };
+
+  const fetchFeaturedCategories = async (): Promise<Category[]> => {
+    const response = await fetch('http://localhost:3000/api/categories?mostFeatured=true&page=1&limit=5', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch featured categories');
+    }
+
+    return response.json();
+  };
+
+  const { data: featuredCommunities = [] } = useQuery({
+    queryKey: ['featuredCommunities'],
+    queryFn: fetchFeaturedCommunities,
+    enabled: !!token,
+  });
+
+  const { data: featuredCategories = [] } = useQuery({
+    queryKey: ['featuredCategories'],
+    queryFn: fetchFeaturedCategories,
+    enabled: !!token,
+  });
+
+  const categoryIcons = {
+    'Sports': Heart,
+    'Cultural': Globe,
+    'Social': Coffee,
+    'Professional': Users,
+    'Learning': BookOpen,
+    'Arts & Creativity': BookOpen,
+    'Technology': BookOpen,
+    'Health & Wellness': Heart,
+    'Gaming': BookOpen,
+    'Environmental': Globe,
+  };
+
+  const handleLocationClick = (location: string, latitude?: number, longitude?: number) => {
+    let mapsUrl;
+    if (latitude && longitude) {
+      // Use coordinates if available for more precise location
+      mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    } else {
+      // Fallback to search by location name
+      mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(location)}`;
+    }
+    window.open(mapsUrl, '_blank');
+  };
 
   return (
     <div className="min-h-screen">
@@ -112,15 +170,18 @@ const Index = () => {
         <div className="container mx-auto max-w-6xl">
           <h2 className="text-3xl font-bold text-center mb-12">Browse by Interest</h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {categories.map((category) => (
-              <Card key={category.name} className="hover:shadow-lg transition-shadow cursor-pointer group">
-                <CardContent className="p-6 text-center">
-                  <category.icon className="h-8 w-8 mx-auto mb-3 text-primary group-hover:scale-110 transition-transform" />
-                  <h3 className="font-semibold mb-1">{category.name}</h3>
-                  <p className="text-sm text-muted-foreground">{category.count} communities</p>
-                </CardContent>
-              </Card>
-            ))}
+            {featuredCategories.map((category) => {
+              const IconComponent = categoryIcons[category.name as keyof typeof categoryIcons] || BookOpen;
+              return (
+                <Card key={category.name} className="hover:shadow-lg transition-shadow cursor-pointer group">
+                  <CardContent className="p-6 text-center">
+                    <IconComponent className="h-8 w-8 mx-auto mb-3 text-primary group-hover:scale-110 transition-transform" />
+                    <h3 className="font-semibold mb-1">{category.name}</h3>
+                    <p className="text-sm text-muted-foreground">{category._count.communities} communities</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -138,14 +199,9 @@ const Index = () => {
           <div className="grid md:grid-cols-3 gap-6">
             {featuredCommunities.map((community) => (
               <Card key={community.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={community.image} 
-                    alt={community.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                <div className="relative h-48 overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
                   <Badge className="absolute top-3 left-3">
-                    {community.category}
+                    {community.category.name}
                   </Badge>
                 </div>
                 <CardContent className="p-6">
@@ -157,17 +213,23 @@ const Index = () => {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                     <div className="flex items-center gap-1">
                       <Users className="h-4 w-4" />
-                      {community.members}
+                      {community._count.memberships}
                     </div>
-                    <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleLocationClick(community.location, community.latitude, community.longitude)}
+                      className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                      title="View on Google Maps"
+                    >
                       <MapPin className="h-4 w-4" />
                       {community.location}
-                    </div>
+                    </button>
                   </div>
                   
                   <div className="flex items-center gap-2 mb-4 p-2 bg-primary/10 rounded">
                     <Calendar className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Next: {community.nextEvent}</span>
+                    <span className="text-sm font-medium">
+                      Created: {new Date(community.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
                   
                   <Button asChild className="w-full">
