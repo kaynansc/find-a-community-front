@@ -50,11 +50,14 @@ const Index = () => {
   const { user, token } = useAuth();
 
   const fetchFeaturedCommunities = async (): Promise<Community[]> => {
+    const headers = new Headers();
+    headers.append('Content-Type', 'application/json');
+    if (token) {
+      headers.append('Authorization', `Bearer ${token}`);
+    }
+
     const response = await fetch('http://localhost:3000/api/communities?page=1&limit=3&mostFeatured=true', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -66,11 +69,14 @@ const Index = () => {
   };
 
   const fetchFeaturedCategories = async (): Promise<Category[]> => {
+    const headers = new Headers();
+    headers.append('Content-Type', 'application/json');
+    if (token) {
+      headers.append('Authorization', `Bearer ${token}`);
+    }
+
     const response = await fetch('http://localhost:3000/api/categories?mostFeatured=true&page=1&limit=5', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -83,13 +89,11 @@ const Index = () => {
   const { data: featuredCommunities = [] } = useQuery({
     queryKey: ['featuredCommunities'],
     queryFn: fetchFeaturedCommunities,
-    enabled: !!token,
   });
 
   const { data: featuredCategories = [] } = useQuery({
     queryKey: ['featuredCategories'],
     queryFn: fetchFeaturedCategories,
-    enabled: !!token,
   });
 
   const categoryIcons = {
