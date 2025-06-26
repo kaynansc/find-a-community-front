@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -46,6 +45,12 @@ interface Category {
   };
 }
 
+interface PlatformSummary {
+  communities: number;
+  users: number;
+  events: number;
+}
+
 const Index = () => {
   const { user, token } = useAuth();
 
@@ -86,6 +91,24 @@ const Index = () => {
     return response.json();
   };
 
+  const fetchPlatformSummary = async (): Promise<PlatformSummary> => {
+    const headers = new Headers();
+    headers.append('Content-Type', 'application/json');
+    if (token) {
+      headers.append('Authorization', `Bearer ${token}`);
+    }
+
+    const response = await fetch('http://localhost:3000/api/platform/summary', {
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch platform summary');
+    }
+
+    return response.json();
+  };
+
   const { data: featuredCommunities = [] } = useQuery({
     queryKey: ['featuredCommunities'],
     queryFn: fetchFeaturedCommunities,
@@ -94,6 +117,11 @@ const Index = () => {
   const { data: featuredCategories = [] } = useQuery({
     queryKey: ['featuredCategories'],
     queryFn: fetchFeaturedCategories,
+  });
+
+  const { data: platformSummary } = useQuery({
+    queryKey: ['platformSummary'],
+    queryFn: fetchPlatformSummary,
   });
 
   const categoryIcons = {
@@ -154,16 +182,22 @@ const Index = () => {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">150+</div>
+              <div className="text-2xl font-bold text-primary">
+                {platformSummary?.communities || 0}
+              </div>
               <div className="text-sm text-muted-foreground">Communities</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">2.5k+</div>
+              <div className="text-2xl font-bold text-primary">
+                {platformSummary?.users || 0}
+              </div>
               <div className="text-sm text-muted-foreground">Members</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">50+</div>
-              <div className="text-sm text-muted-foreground">Events/Week</div>
+              <div className="text-2xl font-bold text-primary">
+                {platformSummary?.events || 0}
+              </div>
+              <div className="text-sm text-muted-foreground">Events</div>
             </div>
           </div>
         </div>
