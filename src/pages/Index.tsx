@@ -183,19 +183,19 @@ const Index = () => {
           <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">
-                {platformSummary?.communities || 0}
+                {platformSummary?.communities || 0}+
               </div>
               <div className="text-sm text-muted-foreground">Communities</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">
-                {platformSummary?.users || 0}
+                {platformSummary?.users || 0}+
               </div>
               <div className="text-sm text-muted-foreground">Members</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">
-                {platformSummary?.events || 0}
+                {platformSummary?.events || 0}+
               </div>
               <div className="text-sm text-muted-foreground">Events</div>
             </div>
