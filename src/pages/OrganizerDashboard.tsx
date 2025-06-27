@@ -19,11 +19,20 @@ import { CreateCommunityForm } from '@/components/CreateCommunityForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
+interface UpcomingEvent {
+  id: string;
+  title: string;
+  date: string;
+  location: string;
+  participantCount: number;
+}
+
 interface OrganizerCommunity {
   id: string;
   name: string;
   memberCount: number;
   pendingEventCount: number;
+  upcomingEvents: UpcomingEvent[];
 }
 
 interface OrganizerCommunitiesResponse {
@@ -78,28 +87,13 @@ const OrganizerDashboard = () => {
     fetchOrganizerCommunities();
   }, [token]);
 
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: 'Sunday Service & Fellowship',
-      community: 'Vancouver Brazilian Community',
-      date: '2024-03-03',
-      time: '10:00 AM',
-      location: 'Community Center Downtown',
-      rsvps: 45,
-      capacity: 80
-    },
-    {
-      id: 2,
-      title: 'Portuguese Conversation Practice',
-      community: 'Portuguese Language Circle',
-      date: '2024-03-05',
-      time: '7:00 PM',
-      location: 'Library Meeting Room',
-      rsvps: 12,
-      capacity: 20
-    }
-  ];
+  // Get all upcoming events from all communities
+  const upcomingEvents = communities.flatMap(community => 
+    community.upcomingEvents.map(event => ({
+      ...event,
+      community: community.name
+    }))
+  );
 
   const stats = {
     totalCommunities: communities.length,
@@ -248,9 +242,11 @@ const OrganizerDashboard = () => {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <Settings className="h-3 w-3 mr-1" />
-                        Manage
+                      <Button variant="outline" size="sm" className="flex-1" asChild>
+                        <Link to={`/organizer/community/${community.id}/members`}>
+                          <Settings className="h-3 w-3 mr-1" />
+                          Manage
+                        </Link>
                       </Button>
                       <Button size="sm" className="flex-1" asChild>
                         <Link to={`/community/${community.id}`}>View</Link>
@@ -272,49 +268,59 @@ const OrganizerDashboard = () => {
             </Button>
           </div>
 
-          <div className="space-y-4">
-            {upcomingEvents.map((event) => (
-              <Card key={event.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg mb-1">{event.title}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">{event.community}</p>
+          {upcomingEvents.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">No upcoming events scheduled.</p>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Event
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {upcomingEvents.map((event) => (
+                <Card key={event.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg mb-1">{event.title}</h3>
+                        <p className="text-sm text-muted-foreground mb-3">{event.community}</p>
+                        
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(event.date).toLocaleDateString()}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {event.location}
+                          </div>
+                        </div>
+                      </div>
                       
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(event.date).toLocaleDateString()}
+                      <div className="text-right">
+                        <div className="text-sm text-muted-foreground">Participants</div>
+                        <div className="text-2xl font-bold">
+                          {event.participantCount}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {event.time}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {event.location}
+                        <div className="flex gap-2 mt-2">
+                          <Button variant="outline" size="sm">
+                            <Settings className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button size="sm">View</Button>
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="text-right">
-                      <div className="text-sm text-muted-foreground">RSVPs</div>
-                      <div className="text-2xl font-bold">
-                        {event.rsvps}/{event.capacity}
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <Button variant="outline" size="sm">
-                          <Settings className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
-                        <Button size="sm">View</Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">

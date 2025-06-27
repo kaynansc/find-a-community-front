@@ -11,6 +11,7 @@ import Communities from "./pages/Communities";
 import CommunityDetail from "./pages/CommunityDetail";
 import UserDashboard from "./pages/UserDashboard";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
+import CommunityMembers from "./pages/CommunityMembers";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/community/:id" element={<CommunityDetail />} />
               <Route path="/dashboard" element={<UserDashboard />} />
               <Route path="/organizer" element={<OrganizerDashboard />} />
+              <Route path="/organizer/community/:communityId/members" element={<CommunityMembers />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/profile" element={<Profile />} />
