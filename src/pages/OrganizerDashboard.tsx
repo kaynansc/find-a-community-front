@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,9 +14,12 @@ import {
   Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { CreateCommunityForm } from '@/components/CreateCommunityForm';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const OrganizerDashboard = () => {
   const { user } = useAuth();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const myCommunities = [
     {
@@ -88,6 +90,11 @@ const OrganizerDashboard = () => {
     );
   }
 
+  const handleCreateSuccess = () => {
+    setIsCreateDialogOpen(false);
+    // TODO: Refresh communities list
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
@@ -98,7 +105,7 @@ const OrganizerDashboard = () => {
             Manage your communities and events.
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Create Community
         </Button>
@@ -163,7 +170,7 @@ const OrganizerDashboard = () => {
         <TabsContent value="communities" className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">My Communities</h2>
-            <Button>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create New
             </Button>
@@ -276,6 +283,19 @@ const OrganizerDashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Create Community Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Community</DialogTitle>
+          </DialogHeader>
+          <CreateCommunityForm
+            onSuccess={handleCreateSuccess}
+            onCancel={() => setIsCreateDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
