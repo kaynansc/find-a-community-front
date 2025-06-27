@@ -68,7 +68,7 @@ const OrganizerDashboard = () => {
     avgAttendance: 85
   };
 
-  if (!user?.isOrganizer) {
+  if (!user?.isOrganizer && !user?.isAdmin) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-md mx-auto">

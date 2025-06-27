@@ -9,6 +9,7 @@ interface User {
   bio?: string;
   interests: string[];
   isOrganizer: boolean;
+  isAdmin: boolean;
   role?: string;
 }
 
@@ -72,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         bio: 'Welcome to Find a Community!',
         interests: [],
         isOrganizer: data.user.role === 'organizer',
+        isAdmin: data.user.role === 'admin',
         role: data.user.role
       };
       
