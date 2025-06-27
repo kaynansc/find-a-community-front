@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,29 +17,66 @@ import {
 import { Link } from 'react-router-dom';
 import { CreateCommunityForm } from '@/components/CreateCommunityForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+
+interface OrganizerCommunity {
+  id: string;
+  name: string;
+  memberCount: number;
+  pendingEventCount: number;
+}
+
+interface OrganizerCommunitiesResponse {
+  data: OrganizerCommunity[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
 
 const OrganizerDashboard = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [communities, setCommunities] = useState<OrganizerCommunity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const myCommunities = [
-    {
-      id: 1,
-      name: 'Vancouver Brazilian Community',
-      category: 'Cultural',
-      members: 234,
-      activeEvents: 3,
-      status: 'active'
-    },
-    {
-      id: 2,
-      name: 'Portuguese Language Circle',
-      category: 'Learning',
-      members: 45,
-      activeEvents: 1,
-      status: 'active'
+  // Fetch organizer communities
+  const fetchOrganizerCommunities = async () => {
+    if (!token) return;
+    
+    try {
+      setIsLoading(true);
+      const response = await fetch('http://localhost:3000/api/platform/organizer/communities', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch communities');
+      }
+
+      const data: OrganizerCommunitiesResponse = await response.json();
+      setCommunities(data.data);
+    } catch (error) {
+      console.error('Error fetching organizer communities:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch your communities.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchOrganizerCommunities();
+  }, [token]);
 
   const upcomingEvents = [
     {
@@ -64,9 +102,9 @@ const OrganizerDashboard = () => {
   ];
 
   const stats = {
-    totalCommunities: myCommunities.length,
-    totalMembers: myCommunities.reduce((sum, community) => sum + community.members, 0),
-    totalEvents: upcomingEvents.length,
+    totalCommunities: communities.length,
+    totalMembers: communities.reduce((sum, community) => sum + community.memberCount, 0),
+    totalEvents: communities.reduce((sum, community) => sum + community.pendingEventCount, 0),
     avgAttendance: 85
   };
 
@@ -92,7 +130,7 @@ const OrganizerDashboard = () => {
 
   const handleCreateSuccess = () => {
     setIsCreateDialogOpen(false);
-    // TODO: Refresh communities list
+    fetchOrganizerCommunities(); // Refresh the communities list
   };
 
   return (
@@ -140,7 +178,7 @@ const OrganizerDashboard = () => {
             <div className="flex items-center">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <div className="ml-2">
-                <p className="text-sm font-medium leading-none">Active Events</p>
+                <p className="text-sm font-medium leading-none">Pending Events</p>
                 <p className="text-2xl font-bold">{stats.totalEvents}</p>
               </div>
             </div>
@@ -176,43 +214,53 @@ const OrganizerDashboard = () => {
             </Button>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {myCommunities.map((community) => (
-              <Card key={community.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{community.name}</CardTitle>
-                    <Badge>{community.status}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Category:</span>
-                      <span>{community.category}</span>
+          {isLoading ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Loading your communities...</p>
+            </div>
+          ) : communities.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">You haven't created any communities yet.</p>
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Community
+              </Button>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {communities.map((community) => (
+                <Card key={community.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{community.name}</CardTitle>
+                      <Badge>active</Badge>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Members:</span>
-                      <span>{community.members}</span>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Members:</span>
+                        <span>{community.memberCount}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Pending Events:</span>
+                        <span>{community.pendingEventCount}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Active Events:</span>
-                      <span>{community.activeEvents}</span>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="flex-1">
+                        <Settings className="h-3 w-3 mr-1" />
+                        Manage
+                      </Button>
+                      <Button size="sm" className="flex-1" asChild>
+                        <Link to={`/community/${community.id}`}>View</Link>
+                      </Button>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Settings className="h-3 w-3 mr-1" />
-                      Manage
-                    </Button>
-                    <Button size="sm" className="flex-1" asChild>
-                      <Link to={`/community/${community.id}`}>View</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="events" className="space-y-6">
