@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
   MapPin, 
   Users, 
@@ -14,7 +15,8 @@ import {
   Clock,
   ArrowLeft,
   Heart,
-  Share2
+  Share2,
+  MessageCircle
 } from 'lucide-react';
 
 interface Community {
@@ -45,7 +47,12 @@ interface Community {
     memberships: number;
   };
   memberships?: Array<{
-    id: string;
+    user: {
+        id: string;
+        name: string;
+        bio: string | null;
+        phoneNumber: string;
+    }
   }>;
 }
 
@@ -513,6 +520,36 @@ const CommunityDetail = () => {
               <p className="text-muted-foreground">No upcoming events scheduled.</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Community Members */}
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Community Members
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {community.memberships && community.memberships.map((membership) => (
+              <Card key={membership.user.id}>
+                <CardContent className="p-6 flex flex-col items-center text-center">
+                  <h3 className="font-semibold text-lg">{membership.user.name}</h3>
+                  {membership.user.bio && (
+                    <p className="text-sm text-muted-foreground mt-1">{membership.user.bio}</p>
+                  )}
+                  {membership.user.phoneNumber && (
+                    <a href={`https://wa.me/send?phone=${membership.user.phoneNumber}&text=Hello, I'm interested in joining the community.`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2">
+                      <MessageCircle className="h-3 w-3" />
+                      Send Message
+                    </a>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>
