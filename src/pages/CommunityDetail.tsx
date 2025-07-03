@@ -283,10 +283,23 @@ const CommunityDetail = () => {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">Please sign in to view community details.</p>
-          <Button asChild>
-            <Link to="/login">Sign In</Link>
-          </Button>
+          <h2 className="text-2xl font-bold mb-4">Join This Community</h2>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Create an account to join this community, attend events, and connect with like-minded people.
+          </p>
+          <div className="space-y-3">
+            <Button asChild size="lg">
+              <Link to="/register">Create Account</Link>
+            </Button>
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <Link to="/login" className="text-primary hover:underline">
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
