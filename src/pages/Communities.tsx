@@ -53,6 +53,7 @@ const Communities = () => {
   const debouncedSearchTerm = useDebounce(searchTerm, 500); // 500ms delay
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [suggestedCategories, setSuggestedCategories] = useState<string[]>([]);
   const { token } = useAuth();
 
   // Set initial category from URL params
@@ -109,6 +110,42 @@ const Communities = () => {
     queryKey: ['categories'],
     queryFn: fetchCategories,
   });
+
+  // Fetch user profile to get interests
+  const fetchUserProfile = async () => {
+    if (!token) return null;
+    
+    const response = await fetch('http://localhost:3000/api/users/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch user profile');
+    }
+
+    return response.json();
+  };
+
+  const { data: userProfile } = useQuery({
+    queryKey: ['userProfile'],
+    queryFn: fetchUserProfile,
+    enabled: !!token,
+  });
+
+  // Set suggested categories based on user interests
+  useEffect(() => {
+    if (userProfile?.interests && categories) {
+      const userInterestNames = userProfile.interests.map(interest => interest.name);
+      const matchedCategoryIds = categories
+        .filter(category => userInterestNames.includes(category.name))
+        .map(category => category.id);
+      
+      setSuggestedCategories(matchedCategoryIds);
+    }
+  }, [userProfile, categories]);
 
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value);
@@ -185,6 +222,30 @@ const Communities = () => {
         <p className="text-muted-foreground mb-6">
           Find and join ongoing communities that match your interests.
         </p>
+
+        {/* Suggested Categories */}
+        {suggestedCategories.length > 0 && (
+          <div className="mb-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
+            <h3 className="text-sm font-medium mb-3 text-primary">Based on your interests</h3>
+            <div className="flex flex-wrap gap-2">
+              {suggestedCategories.map((categoryId) => {
+                const category = categories?.find(cat => cat.id === categoryId);
+                if (!category) return null;
+                
+                return (
+                  <Badge
+                    key={categoryId}
+                    variant="secondary"
+                    className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                    onClick={() => handleCategoryChange(categoryId)}
+                  >
+                    {category.name}
+                  </Badge>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Search and Filter */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
