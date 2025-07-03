@@ -149,7 +149,8 @@ const CommunityDetail = () => {
       });
 
       if (!response.ok && response.status !== 204) {
-        throw new Error('Failed to join community');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to join community');
       }
 
       return response.status === 204 ? null : response.json();
@@ -161,10 +162,10 @@ const CommunityDetail = () => {
         description: "Welcome to the community!",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Failed to join",
-        description: "Please try again later.",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -180,7 +181,8 @@ const CommunityDetail = () => {
       });
 
       if (!response.ok && response.status !== 204) {
-        throw new Error('Failed to leave community');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to leave community');
       }
 
       return response.status === 204 ? null : response.json();
@@ -192,10 +194,10 @@ const CommunityDetail = () => {
         description: "You've successfully left the community.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Failed to leave",
-        description: "Please try again later.",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -211,7 +213,8 @@ const CommunityDetail = () => {
       });
 
       if (!response.ok && response.status !== 204) {
-        throw new Error('Failed to attend event');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to attend event');
       }
 
       return response.status === 204 ? null : response.json();
@@ -223,10 +226,10 @@ const CommunityDetail = () => {
         description: "You're attending this event.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Failed to RSVP",
-        description: "Please try again later.",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -242,7 +245,8 @@ const CommunityDetail = () => {
       });
 
       if (!response.ok && response.status !== 204) {
-        throw new Error('Failed to cancel attendance');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to cancel attendance');
       }
 
       return response.status === 204 ? null : response.json();
@@ -254,10 +258,10 @@ const CommunityDetail = () => {
         description: "Your attendance has been cancelled.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Failed to cancel",
-        description: "Please try again later.",
+        description: error.message,
         variant: "destructive",
       });
     },
