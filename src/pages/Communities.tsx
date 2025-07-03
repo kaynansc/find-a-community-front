@@ -15,6 +15,7 @@ interface Community {
   id: string;
   name: string;
   description: string;
+  imageUrl?: string;
   categoryId: string;
   location: string;
   latitude: number;
@@ -283,7 +284,15 @@ const Communities = () => {
         {communities.map((community) => (
           <Card key={community.id} className="overflow-hidden hover:shadow-lg transition-shadow">
             <div className="relative h-48 overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
-              <Badge className="absolute top-3 left-3">
+              {community.imageUrl && (
+                <img 
+                  src={community.imageUrl} 
+                  alt={community.name}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+              <Badge className="absolute top-3 left-3 z-10">
                 {community.category.name}
               </Badge>
             </div>
