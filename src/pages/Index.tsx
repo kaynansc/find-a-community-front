@@ -12,7 +12,12 @@ import {
   Heart,
   Globe,
   Coffee,
-  BookOpen
+  BookOpen,
+  Cpu,
+  Leaf,
+  Dumbbell,
+  Gamepad2,
+  Palette
 } from 'lucide-react';
 
 interface Community {
@@ -130,11 +135,11 @@ const Index = () => {
     'Social': Coffee,
     'Professional': Users,
     'Learning': BookOpen,
-    'Arts & Creativity': BookOpen,
-    'Technology': BookOpen,
-    'Health & Wellness': Heart,
-    'Gaming': BookOpen,
-    'Environmental': Globe,
+    'Arts & Creativity': Palette,
+    'Technology': Cpu,
+    'Health & Wellness': Dumbbell,
+    'Gaming': Gamepad2,
+    'Environmental': Leaf,
   };
 
   const handleLocationClick = (location: string, latitude?: number, longitude?: number) => {
