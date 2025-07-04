@@ -147,7 +147,7 @@ const CommunityDetail = () => {
   });
 
   // Check if user is already a member based on memberships array
-  const isJoined = community?.memberships && community.memberships.length > 0;
+  const isJoined = community?.memberships && community.memberships.length > 0 && community.memberships.some(membership => membership.user.id === user?.id);
 
   const joinCommunityMutation = useMutation({
     mutationFn: async () => {
