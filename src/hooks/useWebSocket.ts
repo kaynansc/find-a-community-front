@@ -30,6 +30,10 @@ export const useWebSocket = ({
   const [accessDenied, setAccessDenied] = useState(false);
   const websocketRef = useRef<WebSocket | null>(null);
 
+  // Use refs to store callbacks to avoid reconnection loops
+  const callbacksRef = useRef({ onMessage, onOpen, onClose, onError });
+  callbacksRef.current = { onMessage, onOpen, onClose, onError };
+
   const connect = useCallback(() => {
     try {
       websocketRef.current = new WebSocket(url);
@@ -37,13 +41,14 @@ export const useWebSocket = ({
       websocketRef.current.onopen = () => {
         setIsConnected(true);
         setConnectionError(null);
-        onOpen?.();
+        setAccessDenied(false);
+        callbacksRef.current.onOpen?.();
       };
 
       websocketRef.current.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          onMessage?.(message);
+          callbacksRef.current.onMessage?.(message);
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
         }
@@ -61,17 +66,17 @@ export const useWebSocket = ({
           setAccessDenied(true);
         }
         
-        onClose?.(event);
+        callbacksRef.current.onClose?.(event);
       };
 
       websocketRef.current.onerror = (error) => {
         setConnectionError('WebSocket connection error');
-        onError?.(error);
+        callbacksRef.current.onError?.(error);
       };
     } catch (error) {
       setConnectionError('Failed to create WebSocket connection');
     }
-  }, [url, onMessage, onOpen, onClose, onError]);
+  }, [url]);
 
   const disconnect = useCallback(() => {
     if (websocketRef.current) {
