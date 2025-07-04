@@ -14,7 +14,7 @@ interface UseWebSocketProps {
   url: string;
   onMessage?: (message: Message) => void;
   onOpen?: () => void;
-  onClose?: () => void;
+  onClose?: (event: CloseEvent) => void;
   onError?: (error: Event) => void;
 }
 
@@ -27,6 +27,7 @@ export const useWebSocket = ({
 }: UseWebSocketProps) => {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [accessDenied, setAccessDenied] = useState(false);
   const websocketRef = useRef<WebSocket | null>(null);
 
   const connect = useCallback(() => {
@@ -48,9 +49,19 @@ export const useWebSocket = ({
         }
       };
 
-      websocketRef.current.onclose = () => {
+      websocketRef.current.onclose = (event) => {
         setIsConnected(false);
-        onClose?.();
+        
+        // Handle specific close codes for validation errors
+        if (event.code === 1008) {
+          setConnectionError('Community not found');
+          setAccessDenied(true);
+        } else if (event.code === 1003) {
+          setConnectionError('You must be a member to access the chat');
+          setAccessDenied(true);
+        }
+        
+        onClose?.(event);
       };
 
       websocketRef.current.onerror = (error) => {
@@ -85,6 +96,7 @@ export const useWebSocket = ({
   return {
     isConnected,
     connectionError,
+    accessDenied,
     sendMessage,
     connect,
     disconnect,

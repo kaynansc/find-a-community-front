@@ -63,7 +63,7 @@ export const CommunityChat = ({ communityId }: CommunityChatProps) => {
   // WebSocket connection
   const websocketUrl = `ws://localhost:3000?communityId=${communityId}&token=${token}`;
   
-  const { isConnected, connectionError, sendMessage } = useWebSocket({
+  const { isConnected, connectionError, accessDenied, sendMessage } = useWebSocket({
     url: websocketUrl,
     onMessage: (message) => {
       setMessages((prev) => [...prev, message]);
@@ -119,6 +119,18 @@ export const CommunityChat = ({ communityId }: CommunityChatProps) => {
         <CardContent className="p-6 text-center">
           <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">Sign in to join the community chat</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Don't show chat if access is denied
+  if (accessDenied) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">{connectionError}</p>
         </CardContent>
       </Card>
     );
