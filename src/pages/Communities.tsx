@@ -7,7 +7,33 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Search, MapPin, Users, Calendar, Filter } from 'lucide-react';
+import { 
+  Search, 
+  MapPin, 
+  Users, 
+  Calendar, 
+  Filter,
+  Heart,
+  Smile,
+  Palette,
+  Music,
+  Film,
+  BookOpen,
+  Briefcase,
+  Code,
+  Cpu,
+  Gamepad2,
+  Pizza,
+  Plane,
+  Dumbbell,
+  Mountain,
+  TreePine,
+  PawPrint,
+  Handshake,
+  GraduationCap,
+  Church,
+  Star,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDebounce } from '@/hooks/use-debounce';
 
@@ -49,6 +75,26 @@ interface Category {
 }
 
 const Communities = () => {
+  const categoryIcons: { [key: string]: React.ElementType } = {
+    'Technology': Code,
+    'Business': Briefcase,
+    'Art & Culture': Palette,
+    'Music': Music,
+    'Movies & Film': Film,
+    'Books & Writing': BookOpen,
+    'Gaming': Gamepad2,
+    'Food & Drink': Pizza,
+    'Travel & Outdoors': Plane,
+    'Health & Wellness': Dumbbell,
+    'Sports & Fitness': Dumbbell,
+    'Nature & Adventure': Mountain,
+    'Science & Education': GraduationCap,
+    'Social & Networking': Handshake,
+    'Spirituality & Religion': Church,
+    'Pets & Animals': PawPrint,
+    'Hobbies & Crafts': Palette,
+    'Default': Star, // A default icon
+  };
   const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 500); // 500ms delay
@@ -233,15 +279,23 @@ const Communities = () => {
                 const category = categories?.find(cat => cat.id === categoryId);
                 if (!category) return null;
                 
+                const Icon = categoryIcons[category.name] || categoryIcons['Default'];
+
+                const isSelected = selectedCategory === categoryId;
+
                 return (
-                  <Badge
+                  <button
                     key={categoryId}
-                    variant="secondary"
-                    className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
                     onClick={() => handleCategoryChange(categoryId)}
+                    className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
+                      isSelected
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'
+                    }`}
                   >
-                    {category.name}
-                  </Badge>
+                    <Icon className="h-4 w-4" />
+                    <span>{category.name}</span>
+                  </button>
                 );
               })}
             </div>

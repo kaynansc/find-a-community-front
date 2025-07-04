@@ -23,6 +23,7 @@ interface Community {
   id: string;
   name: string;
   description: string;
+  imageUrl?: string;
   categoryId: string;
   location: string;
   latitude: number;
@@ -37,6 +38,7 @@ interface Community {
   organizer: {
     id: string;
     name: string;
+    phoneNumber: string;
   };
   events: Array<{
     id: string;
@@ -352,7 +354,15 @@ const CommunityDetail = () => {
       <div className="grid lg:grid-cols-3 gap-8 mb-8">
         <div className="lg:col-span-2">
           <div className="relative h-64 md:h-80 rounded-lg overflow-hidden mb-6 bg-gradient-to-br from-primary/20 to-primary/5">
-            <Badge className="absolute top-4 left-4">
+            {community.imageUrl && (
+              <img 
+                src={community.imageUrl} 
+                alt={community.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+            <Badge className="absolute top-4 left-4 z-10">
               {community.category.name}
             </Badge>
           </div>
@@ -429,6 +439,12 @@ const CommunityDetail = () => {
               <div>
                 <h4 className="font-medium mb-1">Organizer</h4>
                 <p className="text-sm text-muted-foreground">{community.organizer.name}</p>
+                {community.organizer.phoneNumber && (
+                    <a href={`https://wa.me/send?phone=${community.organizer.phoneNumber}&text=Hello, I'm interested in joining the community.`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2">
+                      <MessageCircle className="h-3 w-3" />
+                      Send Message
+                    </a>
+                  )}
               </div>
               <Separator />
               <div>
