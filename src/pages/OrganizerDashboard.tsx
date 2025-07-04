@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CreateCommunityForm } from '@/components/CreateCommunityForm';
+import { CreateEventForm } from '@/components/CreateEventForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
@@ -49,6 +50,7 @@ const OrganizerDashboard = () => {
   const { user, token } = useAuth();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreateEventDialogOpen, setIsCreateEventDialogOpen] = useState(false);
   const [communities, setCommunities] = useState<OrganizerCommunity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -125,6 +127,11 @@ const OrganizerDashboard = () => {
   const handleCreateSuccess = () => {
     setIsCreateDialogOpen(false);
     fetchOrganizerCommunities(); // Refresh the communities list
+  };
+
+  const handleCreateEventSuccess = () => {
+    setIsCreateEventDialogOpen(false);
+    fetchOrganizerCommunities(); // Refresh to get updated event counts
   };
 
   return (
@@ -262,7 +269,7 @@ const OrganizerDashboard = () => {
         <TabsContent value="events" className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">Upcoming Events</h2>
-            <Button>
+            <Button onClick={() => setIsCreateEventDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create Event
             </Button>
@@ -271,7 +278,7 @@ const OrganizerDashboard = () => {
           {upcomingEvents.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">No upcoming events scheduled.</p>
-              <Button>
+              <Button onClick={() => setIsCreateEventDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Your First Event
               </Button>
@@ -347,6 +354,20 @@ const OrganizerDashboard = () => {
           <CreateCommunityForm
             onSuccess={handleCreateSuccess}
             onCancel={() => setIsCreateDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Event Dialog */}
+      <Dialog open={isCreateEventDialogOpen} onOpenChange={setIsCreateEventDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Event</DialogTitle>
+          </DialogHeader>
+          <CreateEventForm
+            communities={communities.map(c => ({ id: c.id, name: c.name }))}
+            onSuccess={handleCreateEventSuccess}
+            onCancel={() => setIsCreateEventDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>
